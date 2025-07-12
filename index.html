@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Колесо Фортуны с точным определением победителя</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 3.5rem;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #ff8a00, #da1b60);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            max-width: 600px;
+            margin: 0 auto 20px;
+            line-height: 1.6;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .wheel-section {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(25, 25, 35, 0.85);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .wheel-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        #wheelCanvas {
+            width: 350px;
+            height: 350px;
+            border-radius: 50%;
+            background: #0c1027;
+            box-shadow: 0 0 0 8px #ffd166, 0 0 30px rgba(255, 209, 102, 0.7);
+            transition: transform 5s cubic-bezier(0.17, 0.67, 0.18, 0.99);
+        }
+        
+        .wheel-center {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: #ff3860;
+            border-radius: 50%;
+            z-index: 10;
+            box-shadow: 0 0 20px #ff3860;
+            border: 4px solid #ffd166;
+        }
+        
+        .pointer {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 80px;
+            background: #ffd166;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            z-index: 20;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            filter: drop-shadow(0 0 10px rgba(255, 209, 102, 0.9));
+        }
+        
+        .pointer::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 40px;
+            background: #ff3860;
+            clip-path: polygon(0 0, 100% 0, 50% 100%);
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 14px 28px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(to right, #ff8a00, #da1b60);
+            color: white;
+            box-shadow: 0 4px 15px rgba(218, 27, 96, 0.4);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 20px rgba(218, 27, 96, 0.6);
+        }
+        
+        .btn:active {
+            transform: translateY(1px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .participants-section {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(25, 25, 35, 0.85);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .admin-section {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(25, 25, 35, 0.85);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: #ffd166;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(255,255,255,0.1);
+        }
+        
+        .section-content {
+            margin-top: 20px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 150px;
+            padding: 15px;
+            background: rgba(10, 10, 20, 0.7);
+            border: 2px solid #4a4a8a;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #ffd166;
+        }
+        
+        .participant-list {
+            margin-top: 20px;
+        }
+        
+        .participant-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: rgba(10, 10, 20, 0.5);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .participant-item:hover {
+            background: rgba(40, 40, 60, 0.7);
+            transform: translateX(5px);
+        }
+        
+        .participant-name {
+            font-weight: 500;
+        }
+        
+        .bet-input {
+            width: 100px;
+            padding: 8px 12px;
+            background: rgba(10, 10, 20, 0.7);
+            border: 2px solid #4a4a8a;
+            border-radius: 8px;
+            color: white;
+            text-align: right;
+            font-size: 1rem;
+        }
+        
+        .bet-input:focus {
+            outline: none;
+            border-color: #ffd166;
+        }
+        
+        .winner-section {
+            background: rgba(25, 25, 35, 0.85);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            margin-top: 20px;
+        }
+        
+        #winnerDisplay {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            min-height: 60px;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(10, 10, 20, 0.7);
+            border-radius: 12px;
+            color: #ffd166;
+            text-shadow: 0 0 10px rgba(255, 209, 102, 0.5);
+            transition: all 0.5s ease;
+            opacity: 0;
+            transform: scale(0.8);
+        }
+        
+        .winner-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            background: rgba(40, 40, 60, 0.7);
+            border-radius: 10px;
+            margin-bottom: 10px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .winner-number {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            background: #ff3860;
+            border-radius: 50%;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+        
+        .winner-name {
+            flex: 1;
+            font-weight: 500;
+        }
+        
+        .winner-amount {
+            background: rgba(255, 209, 102, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        
+        .info-text {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin-top: 15px;
+            line-height: 1.6;
+        }
+        
+        .highlight {
+            color: #ffd166;
+            font-weight: bold;
+        }
+        
+        .guaranteed-select {
+            width: 100%;
+            padding: 12px;
+            background: rgba(10, 10, 20, 0.7);
+            border: 2px solid #4a4a8a;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+        
+        .guaranteed-select:focus {
+            outline: none;
+            border-color: #ffd166;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(10, 10, 20, 0.5);
+            border-radius: 12px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ffd166;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .wheel-container {
+                height: 300px;
+            }
+            
+            #wheelCanvas {
+                width: 280px;
+                height: 280px;
+            }
+        }
+        
+        .spinning {
+            animation: spinGlow 0.5s infinite alternate;
+        }
+        
+        @keyframes spinGlow {
+            from { box-shadow: 0 0 0 8px #ffd166, 0 0 30px rgba(255, 209, 102, 0.7); }
+            to { box-shadow: 0 0 0 12px #ff8a00, 0 0 50px rgba(255, 138, 0, 0.9); }
+        }
+        
+        .winner-animation {
+            animation: winnerPulse 1s infinite;
+            opacity: 1 !important;
+            transform: scale(1) !important;
+        }
+        
+        @keyframes winnerPulse {
+            0% { transform: scale(1); text-shadow: 0 0 10px rgba(255, 209, 102, 0.5); }
+            50% { transform: scale(1.05); text-shadow: 0 0 20px rgba(255, 209, 102, 0.8); }
+            100% { transform: scale(1); text-shadow: 0 0 10px rgba(255, 209, 102, 0.5); }
+        }
+        
+        .winner-show {
+            animation: winnerShow 0.5s forwards;
+        }
+        
+        @keyframes winnerShow {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>КОЛЕСО ФОРТУНЫ</h1>
+            <p class="subtitle">Вращайте колесо, чтобы определить победителя. Используйте админ-панель для настройки гарантированного победителя или изменения шансов через ставки в рублях.</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="wheel-section">
+                <h2>Колесо Удачи</h2>
+                <div class="wheel-container">
+                    <div class="pointer"></div>
+                    <canvas id="wheelCanvas" width="500" height="500"></canvas>
+                    <div class="wheel-center"></div>
+                </div>
+                <div class="controls">
+                    <button id="spinBtn" class="btn">Крутить колесо!</button>
+                    <button id="resetBtn" class="btn">Сбросить</button>
+                </div>
+                <div id="winnerDisplay">Ожидание вращения...</div>
+            </div>
+            
+            <div class="participants-section">
+                <h2>Участники и ставки</h2>
+                <div class="section-content">
+                    <textarea id="participantsInput" placeholder="Введите имена участников, каждое с новой строки...">Игрок 1
+Игрок 2
+Игрок 3
+Игрок 4
+Игрок 5
+VIP Игрок
+Счастливчик</textarea>
+                    <div class="controls">
+                        <button id="updateBtn" class="btn">Обновить список</button>
+                    </div>
+                    
+                    <div class="participant-list" id="participantsList">
+                        <!-- Участники будут добавлены здесь -->
+                    </div>
+                    
+                    <div class="info-text">
+                        <p><span class="highlight">Инструкция:</span> Введите имена участников в текстовое поле выше. Для каждого участника можно установить ставку в рублях - чем выше ставка, тем больше шанс на победу.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="admin-section">
+                <h2>Админ-панель</h2>
+                <div class="section-content">
+                    <select id="guaranteedWinner" class="guaranteed-select">
+                        <option value="">-- Выберите гарантированного победителя --</option>
+                        <!-- Опции будут добавлены динамически -->
+                    </select>
+                    
+                    <div class="info-text">
+                        <p><span class="highlight">Гарантированный победитель:</span> Независимо от ставок, колесо остановится на выбранном участнике. После вращения выбор сбрасывается.</p>
+                    </div>
+                    
+                    <div class="stats">
+                        <div class="stat-item">
+                            <div class="stat-value" id="totalBets">0</div>
+                            <div class="stat-label">Общая сумма</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="participantCount">0</div>
+                            <div class="stat-label">Участников</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="lastWin">0</div>
+                            <div class="stat-label">Последний выигрыш</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="winner-section">
+            <h2>История победителей</h2>
+            <div class="section-content">
+                <div id="winnersList">
+                    <!-- Победители будут добавлены здесь -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Инициализация переменных
+        const canvas = document.getElementById('wheelCanvas');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spinBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const updateBtn = document.getElementById('updateBtn');
+        const participantsInput = document.getElementById('participantsInput');
+        const participantsList = document.getElementById('participantsList');
+        const guaranteedWinnerSelect = document.getElementById('guaranteedWinner');
+        const winnerDisplay = document.getElementById('winnerDisplay');
+        const winnersList = document.getElementById('winnersList');
+        const totalBetsEl = document.getElementById('totalBets');
+        const participantCountEl = document.getElementById('participantCount');
+        const lastWinEl = document.getElementById('lastWin');
+        
+        let participants = [];
+        let bets = {};
+        let guaranteedWinner = '';
+        let isSpinning = false;
+        let winnersHistory = [];
+        let totalSpins = 0;
+        let totalBetAmount = 0;
+        let currentRotation = 0;
+        let wheelSegments = [];
+        
+        // Цвета для секторов колеса
+        const colors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFBE0B', '#FB5607', 
+            '#8338EC', '#3A86FF', '#1A936F', '#88D18A', '#FF9F1C',
+            '#E71D36', '#662E9B', '#2EC4B6', '#F1C40F', '#9B59B6'
+        ];
+        
+        // Инициализация приложения
+        function init() {
+            // Загрузка начальных участников
+            updateParticipants();
+            
+            // Обработчики событий
+            spinBtn.addEventListener('click', spinWheel);
+            resetBtn.addEventListener('click', resetGame);
+            updateBtn.addEventListener('click', updateParticipants);
+            guaranteedWinnerSelect.addEventListener('change', function() {
+                guaranteedWinner = this.value;
+            });
+            
+            // Отрисовка начального колеса
+            drawWheel();
+        }
+        
+        // Обновление списка участников
+        function updateParticipants() {
+            const input = participantsInput.value.trim();
+            participants = input ? input.split('\n').filter(p => p.trim() !== '') : [];
+            
+            // Сброс вращения колеса
+            currentRotation = 0;
+            canvas.style.transform = 'rotate(0rad)';
+            
+            // Обновление списка участников
+            updateParticipantsList();
+            
+            // Обновление выпадающего списка для гарантированного победителя
+            updateGuaranteedWinnerSelect();
+            
+            // Перерисовка колеса
+            drawWheel();
+        }
+        
+        // Обновление списка участников в интерфейсе
+        function updateParticipantsList() {
+            participantsList.innerHTML = '';
+            
+            participants.forEach(participant => {
+                const item = document.createElement('div');
+                item.className = 'participant-item';
+                
+                const name = document.createElement('div');
+                name.className = 'participant-name';
+                name.textContent = participant;
+                
+                const betContainer = document.createElement('div');
+                betContainer.className = 'bet-container';
+                
+                const betInput = document.createElement('input');
+                betInput.type = 'number';
+                betInput.className = 'bet-input';
+                betInput.placeholder = 'Ставка (руб)';
+                betInput.min = '0';
+                betInput.max = '9999';
+                betInput.value = bets[participant] || '';
+                
+                betInput.addEventListener('change', function() {
+                    const value = parseInt(this.value) || 0;
+                    if (value >= 0 && value <= 9999) {
+                        bets[participant] = value;
+                        updateTotalBets();
+                        drawWheel();
+                    } else {
+                        this.value = '';
+                        delete bets[participant];
+                    }
+                });
+                
+                betContainer.appendChild(betInput);
+                item.appendChild(name);
+                item.appendChild(betContainer);
+                participantsList.appendChild(item);
+            });
+            
+            // Обновление статистики
+            updateStats();
+        }
+        
+        // Обновление выпадающего списка гарантированного победителя
+        function updateGuaranteedWinnerSelect() {
+            guaranteedWinnerSelect.innerHTML = '<option value="">-- Выберите гарантированного победителя --</option>';
+            
+            participants.forEach(participant => {
+                const option = document.createElement('option');
+                option.value = participant;
+                option.textContent = participant;
+                guaranteedWinnerSelect.appendChild(option);
+            });
+        }
+        
+        // Обновление общей суммы ставок
+        function updateTotalBets() {
+            totalBetAmount = Object.values(bets).reduce((sum, bet) => sum + bet, 0);
+            totalBetsEl.textContent = totalBetAmount;
+        }
+        
+        // Обновление статистики
+        function updateStats() {
+            participantCountEl.textContent = participants.length;
+        }
+        
+        // Отрисовка колеса
+        function drawWheel() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 10;
+            
+            // Очистка холста
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Если нет участников
+            if (participants.length === 0) {
+                ctx.font = '20px Arial';
+                ctx.fillStyle = 'white';
+                ctx.textAlign = 'center';
+                ctx.fillText('Добавьте участников', centerX, centerY);
+                return;
+            }
+            
+            // Расчет углов секторов
+            const totalWeight = calculateTotalWeight();
+            let startAngle = 0;
+            
+            // Сброс массива сегментов
+            wheelSegments = [];
+            
+            // Отрисовка секторов
+            participants.forEach((participant, index) => {
+                const weight = bets[participant] || 1;
+                const sliceAngle = 2 * Math.PI * (weight / totalWeight);
+                
+                // Сохраняем данные сегмента
+                wheelSegments.push({
+                    name: participant,
+                    startAngle: startAngle,
+                    endAngle: startAngle + sliceAngle,
+                    bet: bets[participant] || 0
+                });
+                
+                // Рисование сектора
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, startAngle + sliceAngle);
+                ctx.closePath();
+                
+                // Заливка цветом
+                ctx.fillStyle = colors[index % colors.length];
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Текст внутри сектора
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + sliceAngle / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = 'white';
+                ctx.font = '14px Arial';
+                
+                // Сокращение длинных имен
+                let displayName = participant;
+                if (participant.length > 10) {
+                    displayName = participant.substring(0, 8) + '...';
+                }
+                
+                ctx.fillText(displayName, radius - 20, 5);
+                
+                // Отображение ставки, если она есть
+                if (bets[participant]) {
+                    ctx.font = 'bold 12px Arial';
+                    ctx.fillText(`${bets[participant]} руб`, radius - 20, 25);
+                }
+                
+                ctx.restore();
+                
+                startAngle += sliceAngle;
+            });
+            
+            // Центральный круг
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 20, 0, 2 * Math.PI);
+            ctx.fillStyle = '#FF3860';
+            ctx.fill();
+            ctx.strokeStyle = '#FFD166';
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        }
+        
+        // Расчет общего веса для секторов
+        function calculateTotalWeight() {
+            if (participants.length === 0) return 1;
+            
+            let total = 0;
+            participants.forEach(participant => {
+                total += bets[participant] || 1;
+            });
+            return total;
+        }
+        
+        // Определение победителя по текущему углу вращения
+        function getWinnerByAngle(angle) {
+            // Нормализуем угол (0 - 2π)
+            const normalizedAngle = ((angle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+            
+            // Находим сегмент, в который попадает указатель (12 часов = 0 радиан)
+            for (const segment of wheelSegments) {
+                if (normalizedAngle >= segment.startAngle && normalizedAngle < segment.endAngle) {
+                    return segment;
+                }
+            }
+            
+            // На случай ошибок округления проверяем последний сегмент
+            const lastSegment = wheelSegments[wheelSegments.length - 1];
+            if (normalizedAngle >= lastSegment.startAngle && normalizedAngle <= lastSegment.endAngle) {
+                return lastSegment;
+            }
+            
+            return null;
+        }
+        
+        // Вращение колеса
+        function spinWheel() {
+            if (isSpinning || participants.length === 0) return;
+            
+            // Скрыть предыдущего победителя
+            winnerDisplay.classList.remove('winner-animation');
+            winnerDisplay.style.opacity = '0';
+            winnerDisplay.style.transform = 'scale(0.8)';
+            winnerDisplay.textContent = "Крутим...";
+            
+            isSpinning = true;
+            spinBtn.disabled = true;
+            canvas.classList.add('spinning');
+            
+            // Определение победителя
+            let winner;
+            let targetRotation;
+            
+            if (guaranteedWinner && participants.includes(guaranteedWinner)) {
+                // Гарантированный победитель - находим его сегмент
+                const winnerSegment = wheelSegments.find(s => s.name === guaranteedWinner);
+                if (winnerSegment) {
+                    // Вычисляем угол, при котором этот сегмент окажется под указателем
+                    const segmentCenter = (winnerSegment.startAngle + winnerSegment.endAngle) / 2;
+                    targetRotation = -segmentCenter + Math.PI/2; // 12 часов = π/2
+                    winner = winnerSegment;
+                }
+            }
+            
+            // Если гарантированного победителя нет или не нашли - случайный выбор
+            if (!winner) {
+                // Случайный выбор с учетом ставок
+                const totalWeight = calculateTotalWeight();
+                const random = Math.random() * totalWeight;
+                
+                let accumulated = 0;
+                for (let i = 0; i < participants.length; i++) {
+                    accumulated += bets[participants[i]] || 1;
+                    if (random <= accumulated) {
+                        const winnerSegment = wheelSegments[i];
+                        const segmentCenter = (winnerSegment.startAngle + winnerSegment.endAngle) / 2;
+                        targetRotation = -segmentCenter + Math.PI/2;
+                        winner = winnerSegment;
+                        break;
+                    }
+                }
+            }
+            
+            // Добавляем несколько полных оборотов (5-8)
+            const rotations = 5 + Math.random() * 3;
+            targetRotation -= rotations * 2 * Math.PI;
+            
+            // Учитываем текущее вращение
+            targetRotation += currentRotation;
+            
+            // Анимация вращения
+            const spinDuration = 5000; // 5 секунд
+            const startTime = Date.now();
+            const startRotation = currentRotation;
+            
+            // Функция анимации
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / spinDuration, 1);
+                
+                // Кривая замедления
+                const easeOut = 1 - Math.pow(1 - progress, 4);
+                
+                // Текущий угол поворота
+                const rotation = startRotation + easeOut * (targetRotation - startRotation);
+                currentRotation = rotation;
+                
+                // Применение трансформации
+                canvas.style.transform = `rotate(${rotation}rad)`;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Завершение анимации
+                    finishSpin();
+                }
+            }
+            
+            animate();
+        }
+        
+        // Завершение вращения
+        function finishSpin() {
+            isSpinning = false;
+            spinBtn.disabled = false;
+            canvas.classList.remove('spinning');
+            
+            // Определяем победителя по фактическому положению колеса
+            const winnerSegment = getWinnerByAngle(currentRotation);
+            
+            if (winnerSegment) {
+                const winner = winnerSegment.name;
+                const amount = winnerSegment.bet;
+                
+                // Отображение победителя с анимацией
+                winnerDisplay.textContent = winner;
+                winnerDisplay.classList.add('winner-show');
+                setTimeout(() => {
+                    winnerDisplay.classList.add('winner-animation');
+                }, 100);
+                
+                // Добавление в историю победителей
+                winnersHistory.unshift({ name: winner, amount: amount });
+                updateWinnersList();
+                
+                // Обновление статистики
+                lastWinEl.textContent = amount;
+                totalSpins++;
+            }
+            
+            // Сброс гарантированного победителя
+            guaranteedWinner = '';
+            guaranteedWinnerSelect.value = '';
+            
+            // Сброс ставок
+            bets = {};
+            updateParticipantsList();
+            
+            // Перерисовка колеса
+            setTimeout(drawWheel, 1000);
+        }
+        
+        // Обновление списка победителей
+        function updateWinnersList() {
+            winnersList.innerHTML = '';
+            
+            // Ограничение истории до 10 последних победителей
+            const displayWinners = winnersHistory.slice(0, 10);
+            
+            displayWinners.forEach((winner, index) => {
+                const item = document.createElement('div');
+                item.className = 'winner-item';
+                
+                const number = document.createElement('div');
+                number.className = 'winner-number';
+                number.textContent = index + 1;
+                
+                const name = document.createElement('div');
+                name.className = 'winner-name';
+                name.textContent = winner.name;
+                
+                const amount = document.createElement('div');
+                amount.className = 'winner-amount';
+                amount.textContent = winner.amount > 0 ? `${winner.amount} руб` : 'Без ставки';
+                
+                item.appendChild(number);
+                item.appendChild(name);
+                item.appendChild(amount);
+                winnersList.appendChild(item);
+            });
+        }
+        
+        // Сброс игры
+        function resetGame() {
+            winnersHistory = [];
+            bets = {};
+            guaranteedWinner = '';
+            guaranteedWinnerSelect.value = '';
+            currentRotation = 0;
+            canvas.style.transform = 'rotate(0rad)';
+            updateWinnersList();
+            updateParticipantsList();
+            drawWheel();
+            
+            winnerDisplay.textContent = "Ожидание вращения...";
+            winnerDisplay.classList.remove('winner-animation', 'winner-show');
+            winnerDisplay.style.opacity = '0';
+            winnerDisplay.style.transform = 'scale(0.8)';
+        }
+        
+        // Запуск приложения
+        window.onload = init;
+    </script>
+</body>
+</html>
